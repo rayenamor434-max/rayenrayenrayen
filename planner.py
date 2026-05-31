@@ -14,7 +14,7 @@ class Planner:
         self.memory = memory
         self.ai = ai
 
-    # ── Task CRUD ─────────────────────────────────────────────────────────────
+    # ── Task CRUD ─────────────────────────────────────────────────────────[...]
 
     def add(
         self,
@@ -60,14 +60,14 @@ class Planner:
         if not tasks:
             return "No tasks yet. Use /task to add one."
         pending = [t for t in tasks if t.get("status") != "done"]
-        done    = [t for t in tasks if t.get("status") == "done"]
+        done = [t for t in tasks if t.get("status") == "done"]
         lines = [f"Tasks: {len(pending)} pending, {len(done)} done"]
         for t in pending[:10]:
             flag = {"high": "🔴", "normal": "🟡", "low": "🟢"}.get(t.get("priority", "normal"), "🟡")
             lines.append(f"  {flag} [{t['id']}] {t['title']} ({t.get('project', 'inbox')})")
         return "\n".join(lines)
 
-    # ── AI Planning ───────────────────────────────────────────────────────────
+    # ── AI Planning ─────────────────────────────────────────────────────────[...]
 
     def ai_breakdown(self, goal: str) -> Dict:
         """
@@ -83,7 +83,7 @@ Return ONLY a JSON array of objects. Each object must have:
 - "priority": "high" | "normal" | "low"
 - "description": one sentence detail (string)
 
-Example: [{{"title": "Research X", "priority": "high", "description": "Gather info on X."}}]"""
+Example: [{{{"title": "Research X", "priority": "high", "description": "Gather info on X."}}}"""
 
         raw = self.ai.quick(prompt, system="You are a project planning assistant. Output only valid JSON.")
         tasks = []
@@ -136,6 +136,6 @@ Example: [{{"title": "Research X", "priority": "high", "description": "Gather in
         """Return task count stats dict."""
         tasks = self.memory.get_tasks()
         pending = sum(1 for t in tasks if t.get("status") == "pending")
-        done    = sum(1 for t in tasks if t.get("status") == "done")
-        high    = sum(1 for t in tasks if t.get("priority") == "high" and t.get("status") != "done")
+        done = sum(1 for t in tasks if t.get("status") == "done")
+        high = sum(1 for t in tasks if t.get("priority") == "high" and t.get("status") != "done")
         return {"total": len(tasks), "pending": pending, "done": done, "high_priority": high}

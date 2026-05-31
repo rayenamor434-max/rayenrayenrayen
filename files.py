@@ -1,26 +1,77 @@
 """
-JARVIS OMEGA — Files (root-level shim)
-Re-exports FilesAgent from agents.files, with a scan_project method
-that delegates to the project scanner for compatibility with orchestrator.py.
+JARVIS OMEGA — Files (root-level agent)
+File operations and project scanning.
 """
 import os
 from typing import Dict, List, Optional
 from pathlib import Path
 from datetime import datetime
 
-from agents.files import FilesAgent as _FilesAgent
 
+class FilesAgent:
+    """
+    File management agent with project scanning.
+    """
 
-class FilesAgent(_FilesAgent):
-    """
-    Extends the base FilesAgent with a scan_project() method
-    so the Orchestrator can call jarvis.files.scan_project(path).
-    """
+    def __init__(self):
+        pass
+
+    def list_directory(self, path: str = ".") -> Dict:
+        """List files in directory."""
+        try:
+            path = os.path.abspath(path)
+            if not os.path.exists(path):
+                return {"error": f"Path not found: {path}"}
+            if not os.path.isdir(path):
+                return {"error": f"Not a directory: {path}"}
+
+            files = []
+            for item in os.listdir(path):
+                item_path = os.path.join(path, item)
+                is_dir = os.path.isdir(item_path)
+                try:
+                    size = os.path.getsize(item_path)
+                except OSError:
+                    size = 0
+                files.append({
+                    "name": item,
+                    "path": item_path,
+                    "is_dir": is_dir,
+                    "size": size,
+                })
+            return {"path": path, "files": files, "count": len(files)}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def read_file(self, filepath: str) -> Dict:
+        """Read file contents."""
+        try:
+            filepath = os.path.abspath(filepath)
+            if not os.path.exists(filepath):
+                return {"error": f"File not found: {filepath}"}
+            if not os.path.isfile(filepath):
+                return {"error": f"Not a file: {filepath}"}
+
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            return {"path": filepath, "content": content, "size": len(content)}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def write_file(self, filename: str, content: str, mode: str = "w") -> Dict:
+        """Write to file."""
+        try:
+            filename = os.path.abspath(filename)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, mode, encoding="utf-8") as f:
+                f.write(content)
+            return {"path": filename, "size": len(content), "mode": mode}
+        except Exception as e:
+            return {"error": str(e)}
 
     def scan_project(self, folder_path: str) -> Dict:
         """
         Lightweight project scanner that returns structure info.
-        (Full AI-powered scanning is in ProjectScannerAgent.)
         """
         path = os.path.abspath(folder_path)
         if not os.path.exists(path):
@@ -40,13 +91,13 @@ class FilesAgent(_FilesAgent):
 
         # Detect project type by sentinel files
         type_markers = {
-            "fastapi":  ["main.py", "app.py"],
-            "django":   ["manage.py"],
-            "flask":    ["wsgi.py"],
-            "nodejs":   ["package.json", "index.js"],
-            "react":    ["src/index.jsx", "src/index.tsx"],
-            "python":   ["requirements.txt", "setup.py", "pyproject.toml"],
-            "html":     ["index.html"],
+            "fastapi": ["main.py", "app.py"],
+            "django": ["manage.py"],
+            "flask": ["wsgi.py"],
+            "nodejs": ["package.json", "index.js"],
+            "react": ["src/index.jsx", "src/index.tsx"],
+            "python": ["requirements.txt", "setup.py", "pyproject.toml"],
+            "html": ["index.html"],
         }
         for ptype, markers in type_markers.items():
             if any(os.path.exists(os.path.join(path, m)) for m in markers):
@@ -73,8 +124,8 @@ class FilesAgent(_FilesAgent):
                 break
 
         return {
-            "folder":       path,
+            "folder": path,
             "project_type": project_type,
-            "total_files":  total_files,
-            "structure":    structure,
+            "total_files": total_files,
+            "structure": structure,
         }

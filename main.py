@@ -29,7 +29,7 @@ app.add_middleware(
 jarvis = Orchestrator()
 
 
-# ── Schemas ────────────────────────────────────────────────────────────────────
+# ── Schemas ───────────────────────────────────────────────────────────[...]
 
 class ChatRequest(BaseModel):
     message: str
@@ -93,7 +93,7 @@ class VoiceRequest(BaseModel):
     lang: Optional[str] = None
 
 
-# ── Root ────────────────────────────────────────────────────────────────────────
+# ── Root ────────────────────────────────────────────────────────────[...]
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -104,7 +104,7 @@ async def root():
         return "<h1>OMEGA</h1><p>index.html not found. API running at /api/docs</p>"
 
 
-# ── Chat ────────────────────────────────────────────────────────────────────────
+# ── Chat ────────────────────────────────────────────────────────────[...]
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
@@ -152,7 +152,9 @@ async def stream_chat(
                 if chunk is None:
                     yield "data: [DONE]\n\n"
                     break
-                yield f"data: {chunk.replace(chr(10), chr(92)+'n')}\n\n"
+                # FIX: Proper escape sequence for newlines in SSE
+                escaped = chunk.replace("\n", "\\n")
+                yield f"data: {escaped}\n\n"
         finally:
             await future
 
@@ -208,12 +210,16 @@ async def websocket_endpoint(ws: WebSocket, session_id: str):
         pass
 
 
-# ── Voice Synthesis ────────────────────────────────────────────────────────────
+# ── Voice Synthesis ────────────────────────────────────────────────────────[...]
 
 @app.post("/voice/speak")
 async def speak(req: VoiceRequest):
     """Stream TTS audio (MP3) for the given text. No file stored permanently."""
-    from agents.voice import synthesize_stream, is_available
+    try:
+        from voice import synthesize_stream, is_available
+    except ImportError:
+        raise HTTPException(503, "voice module not available")
+
     if not is_available():
         raise HTTPException(503, "edge-tts not installed. Run: pip install edge-tts")
 
@@ -226,8 +232,11 @@ async def speak(req: VoiceRequest):
 
 @app.get("/voice/available")
 async def voice_available():
-    from agents.voice import is_available, list_voices
-    return {"available": is_available(), "voices": list_voices()}
+    try:
+        from voice import is_available, list_voices
+        return {"available": is_available(), "voices": list_voices()}
+    except ImportError:
+        return {"available": False, "voices": []}
 
 
 # ── Browser Control (Playwright) ───────────────────────────────────────────────
@@ -254,8 +263,8 @@ async def browser_search(req: BrowserRequest):
 async def browser_content():
     """Get text content of current browser page."""
     content = await jarvis.browser.get_page_content()
-    url     = await jarvis.browser.current_url()
-    title   = await jarvis.browser.current_title()
+    url = await jarvis.browser.current_url()
+    title = await jarvis.browser.current_title()
     return {"url": url, "title": title, "content": content}
 
 
@@ -270,12 +279,12 @@ async def browser_screenshot():
     return {"path": path}
 
 
-# ── Tasks ────────────────────────────────────────────────────────────────────────
+# ── Tasks ────────────────────────────────────────────────────────────[...]
 
 @app.get("/tasks/summary")
 async def task_summary():
     summary = await asyncio.to_thread(jarvis.planner.summary)
-    stats   = await asyncio.to_thread(jarvis.memory.task_summary)
+    stats = await asyncio.to_thread(jarvis.memory.task_summary)
     return {"text": summary, "stats": stats}
 
 
@@ -321,7 +330,7 @@ async def create_plan(req: PlanRequest):
     return result
 
 
-# ── Memory ────────────────────────────────────────────────────────────────────────
+# ── Memory ───────────────────────────────────────────────────────────[...]
 
 @app.get("/memories/search")
 async def search_memories(q: str = Query(..., min_length=2)):
@@ -349,15 +358,15 @@ async def delete_memory(memory_id: int):
     return {"deleted": memory_id}
 
 
-# ── Code Execution ────────────────────────────────────────────────────────────────
+# ── Code Execution ─────────────────────────────────────────────────────────[...]
 
 @app.post("/execute")
 async def execute_code(req: CodeRequest):
-    result = await asyncio.to_thread(jarvis.coder.execute_raw, req.code)
+    result = await asyncio.to_thread(jarvis.coder.execute, req.code)
     return result
 
 
-# ── Files ─────────────────────────────────────────────────────────────────────────
+# ── Files ────────────────────────────────────────────────────────────[...]
 
 @app.get("/files")
 async def list_files(path: Optional[str] = None):
@@ -375,14 +384,14 @@ async def read_file(req: FileReadRequest):
 
 @app.post("/files/write")
 async def write_file(req: FileWriteRequest):
-    mode   = "a" if req.append else "w"
+    mode = "a" if req.append else "w"
     result = await asyncio.to_thread(jarvis.files.write_file, req.filename, req.content, mode)
     if "error" in result:
         raise HTTPException(400, result["error"])
     return result
 
 
-# ── Research ──────────────────────────────────────────────────────────────────────
+# ── Research ───────────────────────────────────────────────────────────[...]
 
 @app.get("/research")
 async def web_research(q: str = Query(..., min_length=2), type: str = "general"):
@@ -392,17 +401,16 @@ async def web_research(q: str = Query(..., min_length=2), type: str = "general")
     if type == "wikipedia":
         result = await asyncio.to_thread(jarvis.research.wikipedia, q)
         return {"type": "wikipedia", "result": result}
-    data      = await asyncio.to_thread(jarvis.research.search, q)
+    data = await asyncio.to_thread(jarvis.research.search, q)
     formatted = await asyncio.to_thread(jarvis.research.format_search_results, data)
     return {"type": "search", "query": q, "formatted": formatted, "raw": data}
 
 
 @app.post("/research/deep")
 async def deep_research(req: ResearchRequest):
-    from tools.web_scraper import multi_source_research
-    data      = await asyncio.to_thread(multi_source_research, req.query, 2)
+    data = await asyncio.to_thread(jarvis.research.search, req.query)
     formatted = await asyncio.to_thread(jarvis.research.format_search_results, data)
-    summary   = await asyncio.to_thread(
+    summary = await asyncio.to_thread(
         jarvis.ai.quick,
         f"Summarize this research on '{req.query}' concisely:\n{formatted[:2000]}",
         "Summarize research findings accurately. No fabrication.",
@@ -412,21 +420,21 @@ async def deep_research(req: ResearchRequest):
     return {"query": req.query, "summary": summary, "raw": data}
 
 
-# ── Learning ──────────────────────────────────────────────────────────────────────
+# ── Learning ───────────────────────────────────────────────────────────[...]
 
 @app.get("/learning/roadmap")
 async def learning_roadmap(topic: str = Query(..., min_length=2)):
-    roadmap   = await asyncio.to_thread(jarvis.learning.get_roadmap, topic)
+    roadmap = await asyncio.to_thread(jarvis.learning.get_roadmap, topic)
     formatted = await asyncio.to_thread(jarvis.learning.format_roadmap, topic, roadmap) if roadmap else ""
     return {"topic": topic, "roadmap": roadmap, "formatted": formatted}
 
 
 @app.post("/learning/start")
 async def start_learning(req: LearnRequest):
-    roadmap   = await asyncio.to_thread(jarvis.learning.get_roadmap, req.topic)
+    roadmap = await asyncio.to_thread(jarvis.learning.get_roadmap, req.topic)
     study_ctx = await asyncio.to_thread(jarvis.learning.build_study_context, req.topic, req.mode)
-    prompt    = f"I want to learn about {req.topic}. Mode: {req.mode}. Give me an introduction."
-    result    = await asyncio.to_thread(
+    prompt = f"I want to learn about {req.topic}. Mode: {req.mode}. Give me an introduction."
+    result = await asyncio.to_thread(
         jarvis.ai.chat, prompt, req.session_id, None, "", study_ctx, False, ""
     )
     jarvis.memory.log_event("learning", f"Started: {req.topic} ({req.mode})")
@@ -439,7 +447,7 @@ async def learning_sessions():
     return {"sessions": sessions, "count": len(sessions)}
 
 
-# ── Project ───────────────────────────────────────────────────────────────────────
+# ── Project ───────────────────────────────────────────────────────────[...]
 
 @app.post("/project/scan")
 async def scan_project(req: ProjectScanRequest):
@@ -455,11 +463,11 @@ async def scan_project(req: ProjectScanRequest):
     return {**scan, "summary": summary}
 
 
-# ── System ────────────────────────────────────────────────────────────────────────
+# ── System ───────────────────────────────────────────────────────────[...]
 
 @app.get("/system")
 async def system_stats():
-    report    = await asyncio.to_thread(jarvis.sysmon.get_full_report)
+    report = await asyncio.to_thread(jarvis.sysmon.get_full_report)
     processes = await asyncio.to_thread(jarvis.sysmon.get_top_processes, 8)
     return {"report": report, "top_processes": processes}
 
@@ -469,11 +477,11 @@ async def status():
     stats = await asyncio.to_thread(jarvis.get_stats)
     return {
         **stats,
-        "automation" : jarvis.auto.is_ready(),
-        "browser"    : {"playwright": jarvis.browser.is_available() if hasattr(jarvis.browser, 'is_available') else False},
-        "voice"      : {"available": False},  # checked async separately
+        "automation": jarvis.auto.is_ready(),
+        "browser": {"playwright": jarvis.browser.is_available() if hasattr(jarvis.browser, 'is_available') else False},
+        "voice": {"available": False},  # checked async separately
         "server_time": datetime.now().isoformat(),
-        "version"    : "4.0.0",
+        "version": "4.0.0",
     }
 
 
@@ -495,7 +503,7 @@ async def full_reset():
     return {"status": "reset", "timestamp": datetime.now().isoformat()}
 
 
-# ── Auto-start ─────────────────────────────────────────────────────────────────
+# ── Auto-start ──────────────────────────────────────────────────────────[...]
 
 if __name__ == "__main__":
     import uvicorn

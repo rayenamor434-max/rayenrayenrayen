@@ -12,34 +12,45 @@ orchestrator.py calls:
 agents/LearningAgent exposes:
   is_learning_request(), extract_topic(), start_learning(), get_status(), etc.
 """
-from agents.learning import LearningAgent as _LearningAgent
 from typing import Dict, List, Optional
 
 
-class LearningAgent(_LearningAgent):
+class LearningAgent:
     """
     Compatibility wrapper matching the method names orchestrator.py expects.
     All original LearningAgent methods remain available.
     """
 
+    def __init__(self):
+        self.memory = None
+
     # ── Orchestrator-facing API ───────────────────────────────────────────────
 
-    def is_learn_request(self, message: str) -> bool:
-        """Alias for is_learning_request()."""
-        return self.is_learning_request(message)
+    def is_learning_request(self, message: str) -> bool:
+        """Check if message is a learning request."""
+        keywords = ["learn", "teach", "tutorial", "explain", "study", "how to", "understand"]
+        lower = message.lower()
+        return any(kw in lower for kw in keywords)
 
-    def detect_topic_from_message(self, message: str) -> str:
-        """Alias for extract_topic()."""
-        return self.extract_topic(message)
+    def extract_topic(self, message: str) -> str:
+        """Extract topic from message."""
+        # Simple extraction: remove common prefixes
+        msg = message.lower()
+        for prefix in ["teach me", "help me learn", "learn about", "i want to learn", "explain"]:
+            if prefix in msg:
+                topic = msg.replace(prefix, "").strip()
+                return topic if topic else "general"
+        return "general"
 
     def get_roadmap(self, topic: str) -> Optional[List[str]]:
         """
         Return a pre-built roadmap list for a topic from memory,
         or None if no session exists.
         """
-        session = self.memory.get_learning_session(topic)
-        if session and session.get("roadmap"):
-            return session["roadmap"]
+        if self.memory:
+            session = self.memory.get_learning_session(topic)
+            if session and session.get("roadmap"):
+                return session["roadmap"]
         return None
 
     def build_study_context(self, topic: str, mode: str = "standard") -> str:
@@ -49,27 +60,27 @@ class LearningAgent(_LearningAgent):
         """
         lines = [f"[STUDY MODE: {topic.upper()}]"]
 
-        session = self.memory.get_learning_session(topic)
-        if session:
-            roadmap = session.get("roadmap", [])
-            step    = session.get("current_step", 0)
-            total   = session.get("total_steps", len(roadmap))
-            lines.append(f"Progress: Step {step}/{total}")
-            if step < len(roadmap):
-                lines.append(f"Current focus: {roadmap[step]}")
-            if roadmap:
-                lines.append("Roadmap: " + " → ".join(roadmap[:5])
-                             + (" ..." if len(roadmap) > 5 else ""))
+        if self.memory:
+            session = self.memory.get_learning_session(topic)
+            if session:
+                roadmap = session.get("roadmap", [])
+                step = session.get("current_step", 0)
+                total = session.get("total_steps", len(roadmap))
+                lines.append(f"Progress: Step {step}/{total}")
+                if step < len(roadmap):
+                    lines.append(f"Current focus: {roadmap[step]}")
+                if roadmap:
+                    lines.append("Roadmap: " + " → ".join(roadmap[:5]) + (" ..." if len(roadmap) > 5 else ""))
 
-        notes = self.memory.get_study_notes(topic) if hasattr(self.memory, "get_study_notes") else []
-        if notes:
-            recent_note = notes[-1].get("content", "")[:500]
-            if recent_note:
-                lines.append(f"Recent notes: {recent_note}")
+            notes = self.memory.get_study_notes(topic) if hasattr(self.memory, "get_study_notes") else []
+            if notes:
+                recent_note = notes[-1].get("content", "")[:500]
+                if recent_note:
+                    lines.append(f"Recent notes: {recent_note}")
 
         depth_instruction = {
             "quick": "Give a brief, accessible overview.",
-            "deep":  "Go in-depth, cover theory, examples, and edge cases.",
+            "deep": "Go in-depth, cover theory, examples, and edge cases.",
         }.get(mode, "Explain clearly with examples.")
         lines.append(depth_instruction)
 

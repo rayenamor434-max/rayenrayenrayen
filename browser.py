@@ -10,10 +10,10 @@ from typing import Optional, Dict, List
 from datetime import datetime
 
 _playwright_instance = None
-_browser_instance    = None
-_page_instance       = None
-_started             = False
-_lock                = asyncio.Lock()
+_browser_instance = None
+_page_instance = None
+_started = False
+_lock = asyncio.Lock()
 
 
 async def _get_page():
@@ -31,7 +31,7 @@ async def _get_page():
                     args=["--no-sandbox", "--disable-dev-shm-usage",
                           "--disable-blink-features=AutomationControlled"],
                 )
-            ctx  = await _browser_instance.new_context(
+            ctx = await _browser_instance.new_context(
                 viewport={"width": 1280, "height": 800},
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -40,13 +40,14 @@ async def _get_page():
                 ),
             )
             _page_instance = await ctx.new_page()
-            _started       = True
+            _started = True
             return _page_instance
         except Exception as e:
             raise RuntimeError(f"Playwright not available: {e}")
 
 
 def is_available() -> bool:
+    """Check if Playwright is installed."""
     try:
         from playwright.async_api import async_playwright  # noqa
         return True
@@ -66,11 +67,11 @@ class BrowserAgent:
             resp = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
             title = await page.title()
             return {
-                "success" : True,
-                "url"     : page.url,
-                "title"   : title,
-                "status"  : resp.status if resp else 200,
-                "message" : f"Opened: {title} ({page.url})",
+                "success": True,
+                "url": page.url,
+                "title": title,
+                "status": resp.status if resp else 200,
+                "message": f"Opened: {title} ({page.url})",
             }
         except Exception as e:
             return {"success": False, "url": url, "message": str(e)}
@@ -78,11 +79,11 @@ class BrowserAgent:
     async def search(self, query: str, engine: str = "google") -> Dict:
         """Search and return top results."""
         engines = {
-            "google"    : f"https://www.google.com/search?q={_q(query)}",
+            "google": f"https://www.google.com/search?q={_q(query)}",
             "duckduckgo": f"https://duckduckgo.com/?q={_q(query)}",
-            "youtube"   : f"https://www.youtube.com/results?search_query={_q(query)}",
-            "github"    : f"https://github.com/search?q={_q(query)}",
-            "wikipedia" : f"https://en.wikipedia.org/wiki/Special:Search?search={_q(query)}",
+            "youtube": f"https://www.youtube.com/results?search_query={_q(query)}",
+            "github": f"https://github.com/search?q={_q(query)}",
+            "wikipedia": f"https://en.wikipedia.org/wiki/Special:Search?search={_q(query)}",
         }
         url = engines.get(engine.lower(), engines["google"])
         result = await self.open(url)
@@ -113,6 +114,7 @@ class BrowserAgent:
             return f"Could not extract content: {e}"
 
     async def current_url(self) -> str:
+        """Get current page URL."""
         try:
             page = await _get_page()
             return page.url
@@ -120,6 +122,7 @@ class BrowserAgent:
             return ""
 
     async def current_title(self) -> str:
+        """Get current page title."""
         try:
             page = await _get_page()
             return await page.title()
@@ -148,7 +151,12 @@ class BrowserAgent:
             page = await _get_page()
             # Try text first, then selector
             try:
-                await page.get_by_text(selector_or_text, exact=False).first.click(timeout=5000)
+                locator = page.get_by_text(selector_or_text, exact=False)
+                first = await locator.first
+                if first:
+                    await first.click(timeout=5000)
+                else:
+                    await page.click(selector_or_text, timeout=5000)
             except Exception:
                 await page.click(selector_or_text, timeout=5000)
             return {"success": True, "message": f"Clicked: {selector_or_text}"}
@@ -175,30 +183,33 @@ class BrowserAgent:
             return {"success": False, "message": str(e)}
 
     async def close(self):
+        """Close the browser."""
         global _browser_instance, _page_instance, _started
         try:
             if _page_instance:
                 await _page_instance.close()
             _page_instance = None
-            _started       = False
+            _started = False
         except Exception:
             pass
 
     async def status(self) -> Dict:
+        """Get browser status."""
         try:
             page = await _get_page()
             return {
                 "active": True,
-                "url"   : page.url,
-                "title" : await page.title(),
+                "url": page.url,
+                "title": await page.title(),
             }
         except Exception:
             return {"active": False, "url": "", "title": ""}
 
-    # ── Private ───────────────────────────────────────────────────────────────
+    # ── Private ──────────────────────────────────────────────────────────[...]
 
     @staticmethod
     async def _extract_links(page) -> List[Dict]:
+        """Extract links from the current page."""
         try:
             items = await page.evaluate("""() => {
                 const results = [];
@@ -225,5 +236,6 @@ class BrowserAgent:
 
 
 def _q(query: str) -> str:
+    """URL encode query."""
     import urllib.parse
     return urllib.parse.quote_plus(query)

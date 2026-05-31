@@ -1,23 +1,35 @@
+"""Test voice synthesis with proper error handling."""
 import asyncio
-import edge_tts
-import pygame
-import tempfile
 import os
+import sys
 
-async def speak(text, voice="en-US-GuyNeural"):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-        temp_file = f.name
 
-    await edge_tts.Communicate(text, voice).save(temp_file)
+async def test_voice():
+    """Test edge-tts functionality."""
+    try:
+        import edge_tts
+        print("✓ edge-tts installed")
+    except ImportError:
+        print("✗ edge-tts not installed. Run: pip install edge-tts")
+        return
 
-    pygame.mixer.init()
-    pygame.mixer.music.load(temp_file)
-    pygame.mixer.music.play()
+    try:
+        from voice import synthesize_stream, is_available
+        if not is_available():
+            print("✗ Voice synthesis not available")
+            return
 
-    while pygame.mixer.music.get_busy():
-        await asyncio.sleep(0.1)
+        print("Testing voice synthesis...")
+        text = "Hello Rayen, this is a test of the voice system."
+        chunks = []
+        async for chunk in synthesize_stream(text, lang="en"):
+            chunks.append(chunk)
+        print(f"✓ Generated {len(chunks)} audio chunks")
 
-    pygame.mixer.quit()
-    os.remove(temp_file)
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        return
 
-asyncio.run(speak("Hello Rayen"))
+
+if __name__ == "__main__":
+    asyncio.run(test_voice())

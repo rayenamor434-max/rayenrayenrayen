@@ -1,70 +1,86 @@
 """
 JARVIS OMEGA — Derja (root-level shim)
-Exports the 4 functions expected by orchestrator.py,
-adapting the richer tools/derja.py API where signatures differ.
+Language detection and classification without external agent dependencies.
 """
-from tools.derja import (
-    detect_language,
-    normalize_derja as _normalize_derja,
-    build_derja_system_addendum,
-    DERJA_VOCAB,
-    DERJA_PHRASES,
-)
 import re
 from typing import Tuple
 
 
-def normalize_derja(text: str) -> Tuple[str, str]:
+def detect_language(text: str) -> str:
     """
-    Adapter for orchestrator.py which expects (normalized_text, language).
-    tools/derja.normalize_derja returns (text, lang, intent) — we drop intent here.
+    Detect language: English, French, Arabic/Derja, or mixed.
     """
-    normalized, lang, _intent = _normalize_derja(text)
-    return normalized, lang
+    lower = text.lower()
+
+    # Arabic script detection
+    if re.search(r"[\u0600-\u06FF]", text):
+        # Franco-Arab (Derja) detection
+        franco_patterns = ["3aweni", "7ell", "fassarli", "n7b", "lawj", "5dem", "wriha", "bch"]
+        franco_hits = sum(1 for pat in franco_patterns if pat in lower)
+        if franco_hits >= 1:
+            return "derja"
+        return "arabic"
+
+    # French detection
+    fr_words = {"bonjour", "merci", "comment", "je", "tu", "vous", "est", "sont", "avec", "pour", "parler"}
+    words = set(lower.split())
+    if len(words & fr_words) >= 2:
+        return "french"
+
+    return "english"
+
+
+def normalize_derja(text: str) -> Tuple[str, str, str]:
+    """
+    Normalize Derja text and detect language.
+    Returns (normalized_text, language, intent_hint)
+    """
+    language = detect_language(text)
+    lower = text.lower()
+
+    # Simple Franco-Arab replacements
+    replacements = {
+        "7ell": "fix",
+        "3aweni": "help",
+        "fassarli": "explain",
+        "lawj 3la": "search for",
+        "n7b net3allem": "learn",
+        "5dem": "work on",
+        "chnowa": "what is",
+        "wriha": "open it",
+    }
+
+    normalized = lower
+    for derja, english in replacements.items():
+        normalized = normalized.replace(derja, english)
+
+    # Detect intent hint
+    intent_hint = "chat"
+    if any(w in normalized for w in ["fix", "code", "debug"]):
+        intent_hint = "code"
+    elif any(w in normalized for w in ["learn", "teach", "explain"]):
+        intent_hint = "learn"
+    elif any(w in normalized for w in ["search", "look up", "research"]):
+        intent_hint = "research"
+
+    return normalized, language, intent_hint
 
 
 def classify_derja_intent(text: str) -> str:
     """
-    Classify the primary intent of a message using Derja vocabulary and phrases.
-    Returns an intent string like 'code', 'fix', 'learn', 'research', 'chat', etc.
+    Classify intent based on Derja vocabulary.
     """
-    lower = text.lower().strip()
-
-    # Check multi-word phrases first (higher precision)
-    for pattern, intent in DERJA_PHRASES:
-        if re.search(pattern, lower):
-            return intent
-
-    # Single-word vocab lookup
-    parts = lower.split()
-    for word in parts:
-        clean = re.sub(r"[^\w3245678]", "", word)
-        if clean in DERJA_VOCAB:
-            vocab_intent = DERJA_VOCAB[clean].get("intent")
-            if vocab_intent:
-                return vocab_intent
-
-    return "chat"
+    _, _, intent = normalize_derja(text)
+    return intent
 
 
 def build_derja_system_prompt_addon(language: str) -> str:
     """
-    Build a language-specific system prompt addition.
-    For Derja/mixed/Arabic: return the full Derja addendum.
-    For French: return a French-mode instruction.
-    For English: return empty string.
+    Build language-specific system prompt addition.
     """
     if language in ("derja", "mixed", "arabic"):
-        return build_derja_system_addendum()
+        return """LANGUAGE RULE: Respond in the user's language (Arabic/Derja/French/English).
+Derja vocabulary: 7ell=fix, 3aweni=help me, fassarli=explain, lawj 3la=search for, n7b net3allem=I want to learn."""
     elif language == "french":
         return "\nLANGUAGE RULE: The user is writing in French. Respond fluently in French."
     return ""
-
-
-# Re-export detect_language so orchestrator can also use it if needed
-__all__ = [
-    "detect_language",
-    "normalize_derja",
-    "classify_derja_intent",
-    "build_derja_system_prompt_addon",
-]
