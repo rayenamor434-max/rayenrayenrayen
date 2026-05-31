@@ -98,9 +98,8 @@ class Orchestrator:
         """Main entry point for processing user messages."""
         context = context or {}
 
-        # Normalize language
-        normalized, language = normalize_derja(user_message)
-        derja_intent = classify_derja_intent(normalized)
+        # Normalize language (FIX: unpack 3 values, ignore intent_hint)
+        normalized, language, _ = normalize_derja(user_message)
         system_addon = build_derja_system_prompt_addon(language)
 
         # Check if trivial (no processing needed)
@@ -139,7 +138,8 @@ class Orchestrator:
     def stream(self, user_message: str, session_id: str = "default", context: Optional[Dict] = None) -> Iterator[str]:
         """Stream response chunks."""
         context = context or {}
-        normalized, language = normalize_derja(user_message)
+        # FIX: unpack 3 values, ignore intent_hint
+        normalized, language, _ = normalize_derja(user_message)
         system_addon = build_derja_system_prompt_addon(language)
         history = self.memory.get_session_history(session_id)
 
