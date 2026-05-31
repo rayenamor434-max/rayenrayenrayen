@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OMEGA — AI Operating System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #030208;
+  --bg-1: #070510;
+  --bg-2: #0e0a1a;
+  --bg-3: #150f24;
+  --bg-4: #1c1530;
+  --glass: rgba(14,10,26,0.7);
+  --glass-2: rgba(21,15,36,0.5);
+  --amber: #f97316;
+  --amber-dim: rgba(249,115,22,0.15);
+  --amber-soft: rgba(249,115,22,0.08);
+  --violet: #a78bfa;
+  --violet-dim: rgba(167,139,250,0.15);
+  --teal: #2dd4bf;
+  --rose: #fb7185;
+  --text: #ddd6f3;
+  --text-2: #8b80b0;
+  --text-3: #4a4268;
+  --border: rgba(167,139,250,0.1);
+  --border-hot: rgba(249,115,22,0.3);
+  --font: 'DM Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --display: 'Chakra Petch', 'DM Sans', sans-serif;
+  --shadow-amber: 0 0 30px rgba(249,115,22,0.2);
+  --shadow-violet: 0 0 30px rgba(167,139,250,0.15);
+  --r: 10px;
+  --r-lg: 16px;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; background:var(--void); color:var(--text); font-family:var(--font); font-size:14px; line-height:1.55; overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+/* ── BACKGROUND LAYERS ───────────────────────────────────────────── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 10%, rgba(167,139,250,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 85% 90%, rgba(249,115,22,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(45,212,191,0.03) 0%, transparent 80%);
+}
+.noise {
+  position:fixed; inset:0; opacity:0.03; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+button,input,textarea { font:inherit; color:inherit; background:none; border:none; outline:none; }
+button { cursor:pointer; }
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(167,139,250,0.2); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover { background:rgba(249,115,22,0.3); }
+::selection { background:rgba(249,115,22,0.25); color:#fff; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.shell {
+  position:relative; z-index:1;
+  display:grid;
+  grid-template-columns: 220px 1fr 300px;
+  grid-template-rows: 52px 1fr;
+  height:100vh;
+  gap:0;
+}
+
+/* ── TOPBAR ──────────────────────────────────────────────────────── */
+.topbar {
+  grid-column:1/-1;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 18px;
+  border-bottom:1px solid var(--border);
+  background:rgba(3,2,8,0.9);
+  backdrop-filter:blur(20px);
+  position:relative; z-index:50;
+}
+.topbar::after {
+  content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(249,115,22,0.4),transparent);
+  pointer-events:none;
+}
+
+.brand { display:flex; align-items:center; gap:11px; }
+.brand-icon {
+  width:32px; height:32px; border-radius:8px;
+  border:1px solid var(--border-hot);
+  background:rgba(249,115,22,0.08);
+  display:grid; place-items:center;
+  position:relative;
+  box-shadow:0 0 16px rgba(249,115,22,0.2);
+}
+.brand-icon svg { width:16px; height:16px; color:var(--amber); }
+.brand-name {
+  font-family:var(--display);
+  font-size:17px; font-weight:700; letter-spacing:6px;
+  background:linear-gradient(90deg, #fff 0%, var(--amber) 60%, var(--violet) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.brand-sub { font-size:9px; letter-spacing:3px; color:var(--text-3); margin-top:1px; font-weight:400; font-family:var(--mono); }
+
+.topbar-center { display:flex; align-items:center; gap:8px; }
+.status-pill {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 12px; border-radius:20px;
+  border:1px solid var(--border); background:var(--glass);
+  font-size:11px; color:var(--text-2); letter-spacing:0.5px;
+  font-family:var(--mono);
+}
+.status-pill.live { border-color:rgba(45,212,191,0.3); color:var(--teal); background:rgba(45,212,191,0.05); }
+.status-pill.model { border-color:var(--violet-dim); color:var(--violet); background:rgba(167,139,250,0.05); }
+.dot { width:5px; height:5px; border-radius:50%; background:var(--text-3); }
+.dot.on { background:var(--teal); box-shadow:0 0 6px var(--teal); animation:blink 2.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.5} }
+
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.clock { font-family:var(--mono); font-size:12px; color:var(--text-2); letter-spacing:1px; font-variant-numeric:tabular-nums; }
+.tb-btn {
+  width:32px; height:32px; border-radius:8px; display:grid; place-items:center;
+  border:1px solid var(--border); color:var(--text-2);
+  transition:all .2s; font-size:11px;
+}
+.tb-btn:hover { border-color:var(--border-hot); color:var(--amber); background:var(--amber-soft); }
+.tb-btn svg { width:15px; height:15px; }
+
+/* ── LEFT SIDEBAR ────────────────────────────────────────────────── */
+.sidebar-l {
+  border-right:1px solid var(--border);
+  padding:12px 10px;
+  overflow-y:auto;
+  background:rgba(7,5,16,0.6);
+  backdrop-filter:blur(10px);
+  display:flex; flex-direction:column; gap:1px;
+}
+.nav-sect {
+  font-size:9px; letter-spacing:2.5px; color:var(--text-3);
+  padding:14px 10px 6px; font-weight:600; text-transform:uppercase;
+  font-family:var(--mono);
+}
+.nav-btn {
+  display:flex; align-items:center; gap:10px;
+  width:100%; padding:9px 10px; border-radius:8px;
+  color:var(--text-2); font-size:13px; font-weight:400;
+  text-align:left; transition:all .18s; position:relative;
+}
+.nav-btn svg { width:15px; height:15px; flex-shrink:0; opacity:0.7; }
+.nav-btn:hover { background:var(--amber-soft); color:var(--text); }
+.nav-btn:hover svg { opacity:1; }
+.nav-btn.active {
+  background:linear-gradient(90deg, var(--amber-soft), transparent);
+  color:var(--amber);
+  border-left:2px solid var(--amber);
+  padding-left:8px;
+}
+.nav-btn.active svg { color:var(--amber); opacity:1; }
+.nav-btn .badge {
+  margin-left:auto; font-size:9px; padding:2px 6px; border-radius:8px;
+  background:var(--amber-dim); color:var(--amber);
+  font-weight:600; font-family:var(--mono);
+}
+
+.sidebar-footer {
+  margin-top:auto; padding:12px 8px;
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.avatar {
+  width:30px; height:30px; border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  display:grid; place-items:center;
+  font-family:var(--display); font-size:11px; font-weight:700; color:var(--void);
+  flex-shrink:0;
+}
+.user-info { flex:1; min-width:0; }
+.user-name { font-size:12px; font-weight:500; color:var(--text); }
+.user-sub { font-size:10px; color:var(--text-3); font-family:var(--mono); }
+
+/* ── MAIN WORKSPACE ──────────────────────────────────────────────── */
+main.workspace {
+  display:flex; flex-direction:column; overflow:hidden;
+  background:rgba(3,2,8,0.5);
+  position:relative;
+}
+.panel-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 22px; border-bottom:1px solid var(--border);
+  background:rgba(7,5,16,0.8); backdrop-filter:blur(10px);
+  flex-shrink:0;
+}
+.panel-title { display:flex; align-items:center; gap:10px; }
+.panel-title h2 {
+  font-family:var(--display); font-size:13px; font-weight:600;
+  letter-spacing:3px; color:var(--text); text-transform:uppercase;
+}
+.panel-tools { display:flex; gap:6px; }
+.p-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:7px;
+  border:1px solid var(--border); background:transparent;
+  font-size:11px; color:var(--text-2); transition:all .18s;
+}
+.p-btn:hover { border-color:var(--border-hot); color:var(--amber); }
+.p-btn svg { width:12px; height:12px; }
+
+.view { flex:1; overflow:hidden; display:none; flex-direction:column; animation:fadeSlide .25s ease; }
+.view.active { display:flex; }
+@keyframes fadeSlide { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+
+/* ── CHAT VIEW ───────────────────────────────────────────────────── */
+.chat-stream {
+  flex:1; overflow-y:auto; padding:28px 6% 20px;
+  scroll-behavior:smooth;
+}
+
+/* welcome screen */
+.welcome { text-align:center; padding:40px 0 50px; max-width:600px; margin:0 auto; }
+.welcome-logo {
+  width:76px; height:76px; margin:0 auto 22px;
+  border-radius:20px; border:1px solid var(--border-hot);
+  background:rgba(249,115,22,0.06);
+  display:grid; place-items:center;
+  box-shadow:var(--shadow-amber);
+  animation:logoFloat 5s ease-in-out infinite;
+  position:relative;
+}
+.welcome-logo::before {
+  content:''; position:absolute; inset:-1px; border-radius:20px;
+  background:linear-gradient(135deg,rgba(249,115,22,0.3),rgba(167,139,250,0.2));
+  mask:linear-gradient(white,white) content-box, linear-gradient(white,white);
+  mask-composite:exclude; pointer-events:none;
+}
+.welcome-logo svg { width:34px; height:34px; color:var(--amber); }
+@keyframes logoFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.welcome h1 {
+  font-family:var(--display); font-size:34px; font-weight:700;
+  letter-spacing:10px; margin-bottom:10px;
+  background:linear-gradient(135deg,#fff 0%,var(--amber) 50%,var(--violet) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.welcome p { color:var(--text-2); font-size:14px; margin-bottom:28px; line-height:1.6; }
+
+.prompt-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:20px; }
+.prompt-card {
+  padding:14px 16px; border-radius:var(--r); text-align:left; cursor:pointer;
+  border:1px solid var(--border); background:var(--glass);
+  transition:all .22s; backdrop-filter:blur(8px);
+}
+.prompt-card:hover {
+  border-color:rgba(249,115,22,0.25); background:var(--amber-soft);
+  transform:translateY(-2px); box-shadow:var(--shadow-amber);
+}
+.prompt-card .pc-icon { font-size:18px; margin-bottom:8px; }
+.prompt-card h4 { font-size:12.5px; font-weight:500; color:var(--text); margin-bottom:3px; }
+.prompt-card p { font-size:11px; color:var(--text-2); margin:0; }
+
+/* Messages */
+.msg { display:flex; gap:12px; margin-bottom:24px; animation:msgIn .3s ease; }
+@keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+.msg-av {
+  width:30px; height:30px; border-radius:8px; flex-shrink:0;
+  display:grid; place-items:center; font-size:10px; font-weight:600;
+}
+.msg.user .msg-av { background:rgba(30,24,50,0.8); border:1px solid var(--border); color:var(--text-2); }
+.msg.ai .msg-av {
+  background:linear-gradient(135deg,rgba(249,115,22,0.15),rgba(167,139,250,0.15));
+  border:1px solid var(--border-hot);
+  box-shadow:0 0 12px rgba(249,115,22,0.15);
+}
+.msg.ai .msg-av svg { width:13px; height:13px; color:var(--amber); }
+.msg-body { flex:1; min-width:0; }
+.msg-meta { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.msg-name { font-size:11.5px; font-weight:600; color:var(--text); font-family:var(--display); letter-spacing:1px; }
+.msg-time { font-size:10px; color:var(--text-3); font-family:var(--mono); }
+.msg-content { color:var(--text); font-size:13.5px; line-height:1.7; word-wrap:break-word; }
+.msg-content p { margin-bottom:9px; }
+.msg-content p:last-child { margin-bottom:0; }
+.msg-content code {
+  font-family:var(--mono); font-size:12px;
+  background:rgba(167,139,250,0.1); padding:1px 5px;
+  border-radius:4px; color:var(--violet); border:1px solid rgba(167,139,250,0.15);
+}
+.msg-content pre {
+  margin:12px 0; background:var(--bg-2); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden; position:relative;
+}
+.msg-content pre .code-hdr {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 14px; border-bottom:1px solid var(--border);
+  background:rgba(0,0,0,0.3);
+}
+.msg-content pre .code-lang { font-family:var(--mono); font-size:10px; color:var(--text-2); letter-spacing:1px; text-transform:uppercase; }
+.msg-content pre .copy-btn {
+  font-size:10px; color:var(--text-2); padding:2px 8px;
+  border-radius:4px; border:1px solid var(--border); transition:all .15s;
+}
+.msg-content pre .copy-btn:hover { color:var(--amber); border-color:var(--border-hot); }
+.msg-content pre code {
+  display:block; padding:13px; background:transparent; color:var(--text);
+  border:none; font-size:12px; line-height:1.55; overflow-x:auto; white-space:pre;
+}
+.msg-content ul,.msg-content ol { margin:8px 0 9px 20px; }
+.msg-content li { margin-bottom:3px; }
+.msg-content strong { color:#fff; font-weight:600; }
+.msg-content a { color:var(--amber); text-decoration:none; border-bottom:1px dashed rgba(249,115,22,0.4); }
+.msg-content h1,.msg-content h2,.msg-content h3 { margin:12px 0 7px; font-family:var(--display); color:var(--text); font-weight:600; }
+.msg-content h1 { font-size:17px; letter-spacing:1px; }
+.msg-content h2 { font-size:15px; }
+.msg-content h3 { font-size:13px; }
+.msg-content hr { border:none; border-top:1px solid var(--border); margin:14px 0; }
+.msg-content blockquote {
+  border-left:2px solid var(--amber); padding:6px 12px;
+  margin:10px 0; color:var(--text-2); font-style:italic;
+  background:var(--amber-soft); border-radius:0 6px 6px 0;
+}
+
+.msg-actions { display:flex; gap:4px; margin-top:7px; opacity:0; transition:opacity .15s; }
+.msg:hover .msg-actions { opacity:1; }
+.msg-act {
+  font-size:10.5px; color:var(--text-3); padding:3px 8px;
+  border-radius:5px; display:flex; align-items:center; gap:4px; transition:all .15s;
+}
+.msg-act:hover { color:var(--amber); background:var(--amber-soft); }
+.msg-act svg { width:11px; height:11px; }
+
+.action-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+.chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:20px; font-size:11.5px;
+  border:1px solid var(--border-hot); color:var(--amber);
+  background:var(--amber-dim); cursor:pointer; transition:all .18s;
+  font-family:var(--font);
+}
+.chip:hover { background:rgba(249,115,22,0.22); box-shadow:var(--shadow-amber); }
+
+.typing { display:inline-flex; gap:5px; padding:5px 0; align-items:center; }
+.typing span {
+  width:6px; height:6px; border-radius:50%; background:var(--amber);
+  animation:typing 1.3s ease-in-out infinite;
+}
+.typing span:nth-child(2) { animation-delay:.15s; }
+.typing span:nth-child(3) { animation-delay:.3s; }
+@keyframes typing { 0%,80%,100%{opacity:.25;transform:scale(.75)} 40%{opacity:1;transform:scale(1)} }
+
+/* ── INPUT AREA ──────────────────────────────────────────────────── */
+.input-zone {
+  padding:14px 22px 18px;
+  border-top:1px solid var(--border);
+  background:rgba(7,5,16,0.9);
+  backdrop-filter:blur(16px);
+  flex-shrink:0;
+}
+.input-box {
+  display:flex; align-items:flex-end; gap:10px;
+  background:var(--bg-2); border:1px solid var(--border);
+  border-radius:var(--r-lg); padding:10px 12px;
+  transition:border-color .2s, box-shadow .2s;
+}
+.input-box:focus-within {
+  border-color:rgba(249,115,22,0.35);
+  box-shadow:0 0 20px rgba(249,115,22,0.08);
+}
+#input {
+  flex:1; resize:none; background:transparent; color:var(--text);
+  font-size:14px; line-height:1.5; max-height:140px; min-height:22px;
+  overflow-y:auto; padding:1px 0; font-family:var(--font);
+}
+#input::placeholder { color:var(--text-3); }
+.input-actions { display:flex; gap:6px; align-items:center; }
+.inp-btn {
+  width:32px; height:32px; border-radius:8px; display:grid; place-items:center;
+  border:1px solid var(--border); color:var(--text-2); transition:all .18s;
+}
+.inp-btn:hover { border-color:var(--border-hot); color:var(--amber); }
+.inp-btn svg { width:15px; height:15px; }
+.inp-btn.voice.active { border-color:var(--rose); color:var(--rose); background:rgba(251,113,133,0.1); animation:voicePulse 1s ease-in-out infinite; }
+@keyframes voicePulse { 0%,100%{box-shadow:none}50%{box-shadow:0 0 12px rgba(251,113,133,0.4)} }
+.send-btn {
+  width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+  background:linear-gradient(135deg,var(--amber),#ea580c); border:none;
+  color:#fff; transition:all .2s; flex-shrink:0;
+}
+.send-btn:hover { transform:scale(1.05); box-shadow:var(--shadow-amber); }
+.send-btn:active { transform:scale(0.97); }
+.send-btn svg { width:15px; height:15px; }
+
+.input-hints { display:flex; align-items:center; gap:6px; margin-top:8px; padding:0 2px; }
+.hint-tag {
+  font-size:10.5px; color:var(--text-3); padding:2px 8px; border-radius:10px;
+  border:1px solid var(--border); background:transparent; cursor:pointer; transition:all .15s;
+}
+.hint-tag:hover { color:var(--amber); border-color:var(--border-hot); }
+.hint-sep { color:var(--text-3); font-size:10px; font-family:var(--mono); }
+
+/* ── RIGHT PANEL ─────────────────────────────────────────────────── */
+.sidebar-r {
+  border-left:1px solid var(--border);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  background:rgba(7,5,16,0.5);
+  backdrop-filter:blur(10px);
+}
+.panel-tabs {
+  display:flex; border-bottom:1px solid var(--border);
+  background:rgba(3,2,8,0.6); flex-shrink:0;
+}
+.panel-tab {
+  flex:1; padding:10px 0; text-align:center;
+  font-size:10.5px; color:var(--text-3); letter-spacing:1px;
+  text-transform:uppercase; font-family:var(--mono);
+  border-bottom:2px solid transparent; transition:all .18s; cursor:pointer;
+}
+.panel-tab:hover { color:var(--text-2); }
+.panel-tab.active { color:var(--amber); border-bottom-color:var(--amber); }
+
+.panel-body { flex:1; overflow-y:auto; padding:14px; }
+
+/* Activity feed */
+.activity-list { display:flex; flex-direction:column; gap:8px; }
+.activity-item {
+  padding:10px 12px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--glass);
+  display:flex; flex-direction:column; gap:4px;
+  animation:msgIn .25s ease;
+}
+.activity-item .ai-type {
+  font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase;
+  font-family:var(--mono); color:var(--text-3); font-weight:600;
+}
+.activity-item.browser .ai-type { color:var(--teal); }
+.activity-item.research .ai-type { color:var(--violet); }
+.activity-item.code .ai-type { color:var(--amber); }
+.activity-item.memory .ai-type { color:var(--rose); }
+.activity-item .ai-label { font-size:12px; color:var(--text); line-height:1.4; }
+.activity-item .ai-time { font-size:9.5px; color:var(--text-3); font-family:var(--mono); }
+
+/* Memory panel */
+.mem-item {
+  padding:10px 12px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--glass);
+  margin-bottom:8px; transition:border-color .15s;
+}
+.mem-item:hover { border-color:var(--violet-dim); }
+.mem-item .mem-cat {
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  font-family:var(--mono); color:var(--text-3); margin-bottom:5px;
+}
+.mem-item .mem-text { font-size:12.5px; color:var(--text); line-height:1.5; }
+.mem-item .mem-time { font-size:9px; color:var(--text-3); margin-top:5px; font-family:var(--mono); }
+
+/* Tasks panel */
+.task-item {
+  padding:10px 12px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--glass);
+  margin-bottom:8px; display:flex; gap:10px; align-items:flex-start;
+  transition:border-color .15s;
+}
+.task-item:hover { border-color:rgba(249,115,22,0.2); }
+.task-cb {
+  width:16px; height:16px; border-radius:4px;
+  border:1px solid var(--text-3); flex-shrink:0;
+  cursor:pointer; display:grid; place-items:center;
+  transition:all .15s; margin-top:1px;
+}
+.task-cb:hover { border-color:var(--amber); }
+.task-cb.done { background:var(--amber); border-color:var(--amber); }
+.task-cb.done::after { content:'✓'; color:var(--void); font-size:10px; font-weight:700; }
+.task-info { flex:1; min-width:0; }
+.task-title { font-size:12.5px; color:var(--text); margin-bottom:3px; }
+.task-title.done-text { text-decoration:line-through; color:var(--text-3); }
+.task-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.task-pri {
+  font-size:9px; padding:1px 6px; border-radius:8px;
+  font-family:var(--mono); letter-spacing:0.5px; text-transform:uppercase;
+}
+.task-pri.high { background:rgba(251,113,133,0.15); color:var(--rose); }
+.task-pri.normal { background:var(--amber-dim); color:var(--amber); }
+.task-pri.low { background:var(--violet-dim); color:var(--violet); }
+.task-proj { font-size:10px; color:var(--text-3); font-family:var(--mono); }
+
+/* System stats panel */
+.sys-stat { margin-bottom:14px; }
+.sys-stat-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.sys-stat-name { font-size:11px; color:var(--text-2); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; }
+.sys-stat-val { font-size:11px; color:var(--text); font-family:var(--mono); font-weight:600; }
+.sys-bar { height:3px; border-radius:2px; background:var(--bg-3); overflow:hidden; }
+.sys-bar-fill { height:100%; border-radius:2px; transition:width .8s ease; }
+.sys-bar-fill.cpu { background:linear-gradient(90deg,var(--amber),#ea580c); }
+.sys-bar-fill.ram { background:linear-gradient(90deg,var(--violet),#7c3aed); }
+.sys-bar-fill.disk { background:linear-gradient(90deg,var(--teal),#0891b2); }
+
+.sys-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+.sys-info-item {
+  padding:10px 12px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--glass);
+}
+.sys-info-item .si-label { font-size:9px; color:var(--text-3); font-family:var(--mono); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+.sys-info-item .si-val { font-size:13px; color:var(--text); font-weight:500; }
+
+/* Panel empty states */
+.empty-state { text-align:center; padding:32px 16px; color:var(--text-3); }
+.empty-state svg { width:30px; height:30px; margin:0 auto 10px; opacity:0.3; display:block; }
+.empty-state p { font-size:12px; line-height:1.5; }
+
+/* ── SECTION HEADERS ─────────────────────────────────────────────── */
+.section-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 0 10px; margin-bottom:4px;
+}
+.section-hdr h3 { font-size:10px; letter-spacing:2px; color:var(--text-3); text-transform:uppercase; font-family:var(--mono); }
+.section-hdr button { font-size:10px; color:var(--text-3); padding:2px 7px; border-radius:5px; border:1px solid var(--border); transition:all .15s; }
+.section-hdr button:hover { color:var(--amber); border-color:var(--border-hot); }
+
+/* ── TOAST ───────────────────────────────────────────────────────── */
+.toast-wrap { position:fixed; bottom:22px; right:22px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  padding:11px 16px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--bg-2);
+  backdrop-filter:blur(16px);
+  display:flex; align-items:flex-start; gap:10px;
+  min-width:240px; max-width:320px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  animation:toastIn .25s ease;
+}
+@keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+.toast.removing { animation:toastOut .2s ease forwards; }
+@keyframes toastOut { to{opacity:0;transform:translateX(20px)} }
+.toast-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.toast-body { flex:1; }
+.toast-title { font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.toast-msg { font-size:11.5px; color:var(--text-2); }
+.toast.success { border-color:rgba(45,212,191,0.3); }
+.toast.error { border-color:rgba(251,113,133,0.3); }
+.toast.info { border-color:rgba(167,139,250,0.3); }
+
+/* ── MODAL (settings) ────────────────────────────────────────────── */
+.modal-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(3,2,8,0.8); backdrop-filter:blur(12px);
+  display:none; place-items:center;
+}
+.modal-overlay.open { display:grid; }
+.modal {
+  background:var(--bg-2); border:1px solid var(--border);
+  border-radius:var(--r-lg); padding:28px; min-width:380px; max-width:480px;
+  box-shadow:0 24px 48px rgba(0,0,0,0.5);
+  animation:modalIn .25s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:none} }
+.modal h2 { font-family:var(--display); font-size:15px; letter-spacing:3px; margin-bottom:20px; color:var(--text); }
+.modal-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.modal-label { font-size:13px; color:var(--text); }
+.modal-sub { font-size:11px; color:var(--text-2); margin-top:2px; }
+.toggle {
+  width:40px; height:22px; border-radius:11px;
+  background:var(--bg-3); border:1px solid var(--border);
+  position:relative; cursor:pointer; transition:background .2s;
+}
+.toggle.on { background:var(--amber); border-color:var(--amber); }
+.toggle::after {
+  content:''; position:absolute; top:3px; left:3px;
+  width:14px; height:14px; border-radius:50%; background:#fff;
+  transition:left .2s;
+}
+.toggle.on::after { left:21px; }
+.modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; }
+.btn-ghost { padding:8px 16px; border-radius:8px; border:1px solid var(--border); color:var(--text-2); font-size:13px; transition:all .15s; }
+.btn-ghost:hover { color:var(--text); border-color:rgba(167,139,250,0.3); }
+.btn-primary { padding:8px 18px; border-radius:8px; background:linear-gradient(135deg,var(--amber),#ea580c); color:#fff; font-size:13px; font-weight:600; border:none; transition:all .18s; }
+.btn-primary:hover { box-shadow:var(--shadow-amber); }
+
+/* ── VOICE INDICATOR ─────────────────────────────────────────────── */
+.voice-indicator {
+  position:fixed; bottom:100px; left:50%; transform:translateX(-50%) scale(0);
+  z-index:100; background:var(--bg-2); border:1px solid var(--rose);
+  border-radius:40px; padding:12px 22px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:0 8px 32px rgba(251,113,133,0.2);
+  transition:transform .25s ease;
+  pointer-events:none;
+}
+.voice-indicator.active { transform:translateX(-50%) scale(1); }
+.vi-waves { display:flex; gap:3px; align-items:center; height:22px; }
+.vi-wave { width:3px; border-radius:2px; background:var(--rose); animation:waveAnim 0.8s ease-in-out infinite; }
+.vi-wave:nth-child(1){animation-delay:0s;height:8px}
+.vi-wave:nth-child(2){animation-delay:.1s;height:16px}
+.vi-wave:nth-child(3){animation-delay:.2s;height:22px}
+.vi-wave:nth-child(4){animation-delay:.3s;height:14px}
+.vi-wave:nth-child(5){animation-delay:.4s;height:9px}
+@keyframes waveAnim { 0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)} }
+.vi-text { font-size:12px; color:var(--rose); font-family:var(--mono); letter-spacing:1px; }
+
+/* ── RESEARCH VIEW ───────────────────────────────────────────────── */
+.research-view { display:flex; flex-direction:column; }
+.research-input-area { padding:16px 22px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.research-box {
+  display:flex; gap:8px; align-items:center;
+  background:var(--bg-2); border:1px solid var(--border);
+  border-radius:var(--r); padding:8px 12px;
+  transition:border-color .2s;
+}
+.research-box:focus-within { border-color:rgba(249,115,22,0.35); }
+.research-box input { flex:1; font-size:13px; color:var(--text); }
+.research-box input::placeholder { color:var(--text-3); }
+.research-go {
+  padding:5px 14px; border-radius:7px;
+  background:linear-gradient(135deg,var(--amber),#ea580c);
+  color:#fff; font-size:12px; font-weight:600; border:none;
+  transition:all .18s; white-space:nowrap;
+}
+.research-go:hover { box-shadow:var(--shadow-amber); }
+
+.research-result { flex:1; overflow-y:auto; padding:20px 22px; }
+.research-loading { text-align:center; padding:40px; color:var(--text-2); font-size:13px; }
+.research-loading .rl-dots { display:flex; gap:6px; justify-content:center; margin-top:12px; }
+.research-loading .rl-dots span { width:7px; height:7px; border-radius:50%; background:var(--amber); animation:typing 1.3s ease-in-out infinite; }
+.research-loading .rl-dots span:nth-child(2){animation-delay:.15s}
+.research-loading .rl-dots span:nth-child(3){animation-delay:.3s}
+.research-content { display:none; }
+.research-content.visible { display:block; }
+.research-content h3 { font-family:var(--display); font-size:14px; color:var(--text); margin-bottom:14px; letter-spacing:1px; }
+.research-summary {
+  padding:14px; border-radius:var(--r);
+  border:1px solid rgba(249,115,22,0.2); background:var(--amber-soft);
+  font-size:13px; color:var(--text); line-height:1.7; margin-bottom:16px;
+}
+.research-sources { display:flex; flex-direction:column; gap:8px; }
+.research-source {
+  padding:10px 12px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--glass);
+}
+.research-source a { color:var(--amber); font-size:12px; font-weight:500; text-decoration:none; }
+.research-source a:hover { text-decoration:underline; }
+.research-source .rs-snippet { font-size:11.5px; color:var(--text-2); margin-top:4px; line-height:1.5; }
+
+/* Scrollbar for panels */
+.panel-body::-webkit-scrollbar { width:3px; }
+
+/* ── ANIMATIONS ──────────────────────────────────────────────────── */
+@keyframes spin { to{transform:rotate(360deg)} }
+.spinning { animation:spin .8s linear infinite; }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        <polygon points="12 7 17 10 17 14 12 17 7 14 7 10 12 7"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">OMEGA</div>
+      <div class="brand-sub">AI OPERATING SYSTEM</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <div class="status-pill live"><div class="dot on"></div><span id="topStatus">CONNECTED</span></div>
+    <div class="status-pill model"><span id="modelPill">llama-3.3-70b</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="clock" id="clock">--:--:--</div>
+    <button class="tb-btn" title="Voice settings" onclick="openSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
+    <button class="tb-btn" title="Clear conversation" onclick="clearChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+    <button class="tb-btn" title="Settings" onclick="openSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- LEFT SIDEBAR -->
+<nav class="sidebar-l">
+  <div class="nav-sect">Interface</div>
+  <button class="nav-btn active" onclick="switchView('chat',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Chat
+  </button>
+  <button class="nav-btn" onclick="switchView('research',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Research
+  </button>
+  <button class="nav-btn" onclick="switchView('tasks',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Tasks
+    <span class="badge" id="taskBadge">0</span>
+  </button>
+
+  <div class="nav-sect">Agents</div>
+  <button class="nav-btn" onclick="quickAction('system status')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    System Monitor
+  </button>
+  <button class="nav-btn" onclick="quickAction('show my memories')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+    Memory
+  </button>
+  <button class="nav-btn" onclick="quickAction('help me learn something')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Learning
+  </button>
+  <button class="nav-btn" onclick="quickAction('help me write code')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    Code Agent
+  </button>
+
+  <div class="sidebar-footer">
+    <div class="avatar">Ω</div>
+    <div class="user-info">
+      <div class="user-name">OMEGA User</div>
+      <div class="user-sub">ACTIVE SESSION</div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN WORKSPACE -->
+<main class="workspace">
+
+  <!-- CHAT VIEW -->
+  <div class="view active" id="view-chat">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>Chat</h2>
+        <div class="status-pill live" id="chatStatusPill"><div class="dot on"></div>LIVE</div>
+      </div>
+      <div class="panel-tools">
+        <button class="p-btn" onclick="clearChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-stream" id="stream">
+      <div class="welcome" id="welcome">
+        <div class="welcome-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        <h1>OMEGA</h1>
+        <p>Your AI operating system. Ask anything, open anything, build anything.</p>
+        <div class="prompt-grid">
+          <button class="prompt-card" onclick="usePrompt('Open YouTube and search for lo-fi beats')">
+            <div class="pc-icon">🌐</div>
+            <h4>Open YouTube</h4>
+            <p>Open sites and search the web</p>
+          </button>
+          <button class="prompt-card" onclick="usePrompt('Search for the latest AI news today')">
+            <div class="pc-icon">🔍</div>
+            <h4>Research anything</h4>
+            <p>Real web search and fact extraction</p>
+          </button>
+          <button class="prompt-card" onclick="usePrompt('Write me a Python function that sorts a list')">
+            <div class="pc-icon">⚡</div>
+            <h4>Write code</h4>
+            <p>Generate, debug and run code</p>
+          </button>
+          <button class="prompt-card" onclick="usePrompt('I want to learn machine learning from scratch')">
+            <div class="pc-icon">📚</div>
+            <h4>Learn a skill</h4>
+            <p>Structured curriculum with roadmap</p>
+          </button>
+          <button class="prompt-card" onclick="usePrompt('What is the weather in Tunis today?')">
+            <div class="pc-icon">🌤</div>
+            <h4>Weather</h4>
+            <p>Real-time weather anywhere</p>
+          </button>
+          <button class="prompt-card" onclick="usePrompt('Add task: review project proposal, priority high')">
+            <div class="pc-icon">✅</div>
+            <h4>Manage tasks</h4>
+            <p>Track your work and goals</p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-zone">
+      <div class="input-box">
+        <textarea id="input" rows="1" placeholder="Ask OMEGA anything…" onkeydown="handleKey(event)"></textarea>
+        <div class="input-actions">
+          <button class="inp-btn voice" id="voiceBtn" title="Voice input" onclick="toggleVoice()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          </button>
+          <button class="send-btn" onclick="send()" title="Send (Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-hints">
+        <button class="hint-tag" onclick="usePrompt('Open Instagram')">Open Instagram</button>
+        <span class="hint-sep">·</span>
+        <button class="hint-tag" onclick="usePrompt('Search for news about AI')">Research</button>
+        <span class="hint-sep">·</span>
+        <button class="hint-tag" onclick="usePrompt('Write a Python script')">Code</button>
+        <span class="hint-sep">·</span>
+        <button class="hint-tag" onclick="usePrompt('What is my CPU usage?')">System</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESEARCH VIEW -->
+  <div class="view" id="view-research">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>Research</h2>
+        <div class="status-pill"><span>Web Search</span></div>
+      </div>
+    </div>
+    <div class="research-view" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="research-input-area">
+        <div class="research-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text-3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="researchInput" placeholder="Research any topic deeply…" onkeydown="if(event.key==='Enter')doResearch()"/>
+          <button class="research-go" onclick="doResearch()">Search</button>
+        </div>
+      </div>
+      <div class="research-result">
+        <div class="research-loading" id="researchLoading" style="display:none">
+          <p style="color:var(--text-2)">Searching the web…</p>
+          <div class="rl-dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="research-content" id="researchContent">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <p>Enter a topic above to start deep research across multiple web sources</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASKS VIEW -->
+  <div class="view" id="view-tasks">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>Tasks</h2>
+        <div class="status-pill"><span id="taskCount">0 pending</span></div>
+      </div>
+      <div class="panel-tools">
+        <button class="p-btn" onclick="refreshTasks()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 22px" id="tasksList">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <p>No tasks yet. Ask OMEGA to add one for you.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- RIGHT SIDEBAR -->
+<aside class="sidebar-r">
+  <div class="panel-tabs">
+    <button class="panel-tab active" onclick="switchPanel('activity',this)">Feed</button>
+    <button class="panel-tab" onclick="switchPanel('memory',this)">Memory</button>
+    <button class="panel-tab" onclick="switchPanel('system',this)">System</button>
+  </div>
+
+  <!-- ACTIVITY FEED -->
+  <div class="panel-body" id="panel-activity">
+    <div class="section-hdr">
+      <h3>Live Actions</h3>
+      <button onclick="clearActivity()">Clear</button>
+    </div>
+    <div class="activity-list" id="activityFeed">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <p>Actions will appear here as OMEGA works</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY PANEL -->
+  <div class="panel-body" id="panel-memory" style="display:none">
+    <div class="section-hdr">
+      <h3>Stored Memories</h3>
+      <button onclick="loadMemories()">↻</button>
+    </div>
+    <div id="memoriesList">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg>
+        <p>No memories stored yet</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM PANEL -->
+  <div class="panel-body" id="panel-system" style="display:none">
+    <div class="section-hdr">
+      <h3>System Status</h3>
+      <button onclick="loadSystem()">↻</button>
+    </div>
+    <div id="systemStats">
+      <div class="sys-stat">
+        <div class="sys-stat-label">
+          <span class="sys-stat-name">CPU</span>
+          <span class="sys-stat-val" id="cpuVal">--</span>
+        </div>
+        <div class="sys-bar"><div class="sys-bar-fill cpu" id="cpuBar" style="width:0%"></div></div>
+      </div>
+      <div class="sys-stat">
+        <div class="sys-stat-label">
+          <span class="sys-stat-name">RAM</span>
+          <span class="sys-stat-val" id="ramVal">--</span>
+        </div>
+        <div class="sys-bar"><div class="sys-bar-fill ram" id="ramBar" style="width:0%"></div></div>
+      </div>
+      <div class="sys-stat">
+        <div class="sys-stat-label">
+          <span class="sys-stat-name">Disk</span>
+          <span class="sys-stat-val" id="diskVal">--</span>
+        </div>
+        <div class="sys-bar"><div class="sys-bar-fill disk" id="diskBar" style="width:0%"></div></div>
+      </div>
+      <div class="sys-info-grid" id="sysInfoGrid">
+        <div class="sys-info-item"><div class="si-label">Platform</div><div class="si-val" id="siPlatform">--</div></div>
+        <div class="sys-info-item"><div class="si-label">Uptime</div><div class="si-val" id="siUptime">--</div></div>
+        <div class="sys-info-item"><div class="si-label">Tasks</div><div class="si-val" id="siTasks">--</div></div>
+        <div class="sys-info-item"><div class="si-label">Memories</div><div class="si-val" id="siMems">--</div></div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+</div><!-- /shell -->
+
+<!-- Voice indicator -->
+<div class="voice-indicator" id="voiceIndicator">
+  <div class="vi-waves">
+    <div class="vi-wave"></div><div class="vi-wave"></div><div class="vi-wave"></div>
+    <div class="vi-wave"></div><div class="vi-wave"></div>
+  </div>
+  <div class="vi-text">LISTENING…</div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>SETTINGS</h2>
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Voice Output</div>
+        <div class="modal-sub">Read responses aloud (edge-tts)</div>
+      </div>
+      <div class="toggle" id="voiceToggle" onclick="toggleSetting('voice')"></div>
+    </div>
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Stream Responses</div>
+        <div class="modal-sub">Show text as it's generated</div>
+      </div>
+      <div class="toggle on" id="streamToggle" onclick="toggleSetting('stream')"></div>
+    </div>
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Auto-open URLs</div>
+        <div class="modal-sub">Open browser links automatically</div>
+      </div>
+      <div class="toggle on" id="autoOpenToggle" onclick="toggleSetting('autoOpen')"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   OMEGA — Frontend Runtime
+═══════════════════════════════════════════════════════════ */
+
+const API = window.location.origin;
+const SESSION_ID = 'omega_' + Date.now().toString(36);
+
+/* ── SETTINGS ──────────────────────────────────────────────── */
+const settings = {
+  voice: false,
+  stream: true,
+  autoOpen: true,
+  ...JSON.parse(localStorage.getItem('omega_settings')||'{}')
+};
+function saveSett(){ localStorage.setItem('omega_settings',JSON.stringify(settings)); }
+function toggleSetting(k){
+  settings[k]=!settings[k]; saveSett();
+  const el=document.getElementById(k+'Toggle');
+  if(el) el.classList.toggle('on',settings[k]);
+}
+function syncSettingsUI(){
+  ['voice','stream','autoOpen'].forEach(k=>{
+    const el=document.getElementById(k+'Toggle');
+    if(el) el.classList.toggle('on',settings[k]);
+  });
+}
+function openSettings(){ document.getElementById('settingsModal').classList.add('open'); syncSettingsUI(); }
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
+document.getElementById('settingsModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeSettings(); });
+
+/* ── CLOCK ─────────────────────────────────────────────────── */
+function updateClock(){
+  const n=new Date();
+  const pad=x=>String(x).padStart(2,'0');
+  document.getElementById('clock').textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+}
+setInterval(updateClock,1000); updateClock();
+
+/* ── VIEWS ─────────────────────────────────────────────────── */
+function switchView(name,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(name==='tasks') refreshTasks();
+}
+
+/* ── PANEL TABS ────────────────────────────────────────────── */
+function switchPanel(name,btn){
+  document.querySelectorAll('.panel-body').forEach(p=>p.style.display='none');
+  document.getElementById('panel-'+name).style.display='block';
+  document.querySelectorAll('.panel-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(name==='system') loadSystem();
+  if(name==='memory') loadMemories();
+}
+
+/* ── TOAST ─────────────────────────────────────────────────── */
+function toast(title,msg,type='info'){
+  const icons={success:'✓',error:'✗',info:'◆'};
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<div class="toast-icon">${icons[type]||'◆'}</div><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('removing'); setTimeout(()=>el.remove(),220); },3500);
+}
+
+/* ── ACTIVITY FEED ─────────────────────────────────────────── */
+const activityTypes = { browser:'browser', research:'research', code:'code', memory:'memory', tool_use:'research', system:'browser' };
+function addActivity(type,label){
+  const feed=document.getElementById('activityFeed');
+  // remove empty state
+  const es=feed.querySelector('.empty-state');
+  if(es) es.remove();
+  const cls=activityTypes[type]||'';
+  const now=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const item=document.createElement('div');
+  item.className=`activity-item ${cls}`;
+  item.innerHTML=`<div class="ai-type">${type.replace('_',' ')}</div><div class="ai-label">${escHtml(label)}</div><div class="ai-time">${now}</div>`;
+  feed.insertBefore(item,feed.firstChild);
+  // Keep max 40 items
+  const items=feed.querySelectorAll('.activity-item');
+  if(items.length>40) items[items.length-1].remove();
+}
+function clearActivity(){ document.getElementById('activityFeed').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Feed cleared</p></div>'; }
+
+/* ── MARKDOWN RENDERER ─────────────────────────────────────── */
+function md(text){
+  if(!text) return '';
+  // code blocks
+  text=text.replace(/```(\w+)?\n?([\s\S]*?)```/g,(_,lang,code)=>{
+    const l=lang||'code';
+    return `<pre><div class="code-hdr"><span class="code-lang">${escHtml(l)}</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>${escHtml(code.trim())}</code></pre>`;
+  });
+  // inline code
+  text=text.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // bold
+  text=text.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  // italic
+  text=text.replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  // headers
+  text=text.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  text=text.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  text=text.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // horizontal rule
+  text=text.replace(/^---+$/gm,'<hr>');
+  // blockquote
+  text=text.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  // links
+  text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // bare urls
+  text=text.replace(/(?<![="'(>])(https?:\/\/[^\s<>"']{10,})/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+  // unordered list
+  text=text.replace(/^[*\-] (.+)$/gm,'<li>$1</li>');
+  text=text.replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>');
+  // ordered list
+  text=text.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  // paragraphs
+  text=text.split(/\n\n+/).map(b=>b.trim()&&!b.startsWith('<')?`<p>${b.replace(/\n/g,'<br>')}</p>`:b).join('\n');
+  return text;
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function copyCode(btn){
+  const code=btn.closest('pre').querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(()=>{ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1800); });
+}
+
+/* ── MESSAGES STATE ────────────────────────────────────────── */
+let messages=[];
+const MSGS_KEY='omega_messages_v2';
+(async()=>{
+  try{ const v=localStorage.getItem(MSGS_KEY); if(v) messages=JSON.parse(v)||[]; } catch{}
+  renderAll();
+})();
+function saveMessages(){ try{ localStorage.setItem(MSGS_KEY,JSON.stringify(messages.slice(-60))); }catch{} }
+function nowStr(){ return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+
+/* ── CONTEXT (pronoun resolution) ──────────────────────────── */
+const ctx={ last_song:null,last_artist:null,last_url:null,last_domain:null,last_topic:null };
+
+const PLATFORM_BASES={
+  youtube:'https://www.youtube.com/results?search_query=',spotify:'https://open.spotify.com/search/',
+  soundcloud:'https://soundcloud.com/search?q=',deezer:'https://www.deezer.com/search/',
+  google:'https://www.google.com/search?q=',amazon:'https://www.amazon.com/s?k=',
+  wikipedia:'https://en.wikipedia.org/wiki/Special:Search?search=',github:'https://github.com/search?q=',
+  linkedin:'https://www.linkedin.com/search/results/all/?keywords=',twitter:'https://twitter.com/search?q=',
+  reddit:'https://www.reddit.com/search/?q=',ebay:'https://www.ebay.com/sch/i.html?_nkw=',
+  bing:'https://www.bing.com/search?q=',duckduckgo:'https://duckduckgo.com/?q=',
+  instagram:'https://www.instagram.com/',facebook:'https://www.facebook.com/',
+};
+const NAMED_SITES={
+  youtube:'https://youtube.com',google:'https://google.com',github:'https://github.com',
+  twitter:'https://twitter.com',reddit:'https://reddit.com',stackoverflow:'https://stackoverflow.com',
+  wikipedia:'https://wikipedia.org',facebook:'https://facebook.com',instagram:'https://instagram.com',
+  linkedin:'https://linkedin.com',gmail:'https://mail.google.com',docs:'https://docs.google.com',
+  drive:'https://drive.google.com',spotify:'https://open.spotify.com',soundcloud:'https://soundcloud.com',
+  tiktok:'https://tiktok.com',twitch:'https://twitch.tv',discord:'https://discord.com',
+  notion:'https://notion.so',figma:'https://figma.com',openai:'https://openai.com',
+};
+
+window._openOnPlatform=function(platform,query){
+  const base=PLATFORM_BASES[platform];
+  if(!base) return;
+  window.open(base+encodeURIComponent(query),'_blank','noopener,noreferrer');
+};
+
+function extractDomain(url){
+  try{ return new URL(url).hostname.replace(/^www\./,''); }catch{ return url.slice(0,40); }
+}
+
+function updateCtx(text,msgObj){
+  if(!text) return;
+  const allUrls=[];
+  [...text.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)]{8,})\)/g)].forEach(m=>allUrls.push(m[2]));
+  [...text.matchAll(/(?<![="'(>])(https?:\/\/[^\s<>"']{8,})/g)].forEach(m=>allUrls.push(m[1]));
+  if(allUrls.length){ ctx.last_url=allUrls[allUrls.length-1]; ctx.last_domain=extractDomain(ctx.last_url); }
+  const songPats=[/[""]([^""]{3,60})[""]/g,/'([^']{3,60})'/g,/(?:song|track|single|album)\s+(?:called|titled|named)\s+["']?([^"'\n]{3,60})["']?/gi];
+  for(const p of songPats){ const m=p.exec(text); if(m){ctx.last_song=(m[1]||m[2]||'').trim();break;} }
+  const am=text.match(/by\s+([A-Z][a-zA-Z\s\.]{2,30})(?=[\s,\.\n])/);
+  if(am) ctx.last_artist=am[1].trim();
+  const tm=text.match(/(?:about|regarding|on|for)\s+([A-Za-z][^\n.?!]{5,60}?)(?:[.?!]|\n|$)/i);
+  if(tm) ctx.last_topic=tm[1].trim();
+  if(msgObj){
+    msgObj.chips=[];
+    if(ctx.last_url) msgObj.chips.push({type:'url',url:ctx.last_url,label:ctx.last_domain||ctx.last_url});
+    if(ctx.last_song) msgObj.chips.push({type:'song',query:ctx.last_song});
+  }
+}
+
+/* ── BROWSER COMMAND DETECTION ─────────────────────────────── */
+function detectBrowserCmd(text){
+  const t=text.trim().toLowerCase();
+  // Exact site names
+  for(const [site,url] of Object.entries(NAMED_SITES)){
+    if(t===site||t==='open '+site||t==='launch '+site||t==='go to '+site) return {url,label:site.charAt(0).toUpperCase()+site.slice(1)};
+  }
+  // open/go to URL
+  const openPats=['open ','go to ','navigate to ','launch ','visit '];
+  for(const p of openPats){
+    if(t.startsWith(p)){
+      const target=text.slice(p.length).trim();
+      if(target&&(target.includes('.')||target.startsWith('http'))){
+        const url=target.startsWith('http')?target:'https://'+target;
+        return {url,label:extractDomain(url)};
+      }
+    }
+  }
+  // play X on platform
+  const playPlatM=t.match(/^(?:open|play|search|listen\s+to|find)\s+(.+?)\s+(?:in|on|at)\s+(youtube|spotify|soundcloud|deezer|github|reddit|twitter|linkedin)/i);
+  if(playPlatM){
+    const q=playPlatM[1].trim(),pl=playPlatM[2].toLowerCase();
+    return {url:(PLATFORM_BASES[pl]||PLATFORM_BASES.google)+encodeURIComponent(q),label:q+' on '+pl};
+  }
+  // play X -> youtube
+  const playM=t.match(/^(?:play|listen\s+to)\s+(.+)/);
+  if(playM){ const q=playM[1].trim(); return {url:PLATFORM_BASES.youtube+encodeURIComponent(q),label:q+' on YouTube'}; }
+  return null;
+}
+
+/* ── RENDER ─────────────────────────────────────────────────── */
+function buildChipsHTML(chips){
+  if(!chips||!chips.length) return '';
+  const parts=chips.map(c=>{
+    if(c.type==='url') return `<button class="chip" onclick="window.open(${JSON.stringify(c.url)},'_blank','noopener,noreferrer')">🔗 Open ${escHtml(c.label||c.url)}</button>`;
+    if(c.type==='song') return `<button class="chip" onclick="_openOnPlatform('youtube',${JSON.stringify(c.query)})">▶ Play on YouTube</button><button class="chip" onclick="_openOnPlatform('spotify',${JSON.stringify(c.query)})">🎵 Spotify</button>`;
+    return '';
+  }).filter(Boolean);
+  return parts.length?`<div class="action-chips">${parts.join('')}</div>`:'';
+}
+
+function renderMsg(m){
+  const el=document.createElement('div');
+  el.className='msg '+m.role;
+  el.dataset.id=m.id||'';
+  const chips=m.role==='ai'?buildChipsHTML(m.chips||[]):'';
+  el.innerHTML=`
+    <div class="msg-av">
+      ${m.role==='ai'?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><circle cx="12" cy="12" r="3"/></svg>`:'YOU'}
+    </div>
+    <div class="msg-body">
+      <div class="msg-meta">
+        <span class="msg-name">${m.role==='ai'?'OMEGA':'YOU'}</span>
+        <span class="msg-time">${m.time}</span>
+      </div>
+      <div class="msg-content">${m.content?md(m.content):'<div class="typing"><span></span><span></span><span></span></div>'}</div>
+      ${chips}
+      ${m.content?`<div class="msg-actions">
+        <button class="msg-act" onclick="navigator.clipboard.writeText(this.closest('.msg').querySelector('.msg-content').innerText);toast('Copied','Message copied to clipboard','success')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
+        </button>
+      </div>`:''}
+    </div>`;
+  return el;
+}
+
+const stream=document.getElementById('stream');
+const welcome=document.getElementById('welcome');
+
+function renderAll(){
+  if(messages.length) welcome.style.display='none';
+  else{ welcome.style.display=''; return; }
+  stream.querySelectorAll('.msg').forEach(x=>x.remove());
+  messages.forEach(m=>stream.appendChild(renderMsg(m)));
+  stream.scrollTop=stream.scrollHeight;
+}
+
+function clearChat(){
+  messages=[];
+  saveMessages();
+  stream.querySelectorAll('.msg').forEach(x=>x.remove());
+  welcome.style.display='';
+  fetch(`${API}/clear`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SESSION_ID})}).catch(()=>{});
+}
+
+/* ── SEND ───────────────────────────────────────────────────── */
+let _pendingReq=null, _lastSent='', _lastSentTime=0;
+
+async function send(){
+  const inp=document.getElementById('input');
+  const text=inp.value.trim();
+  if(!text) return;
+  const now=Date.now();
+  if(text===_lastSent&&now-_lastSentTime<2000) return;
+  _lastSent=text; _lastSentTime=now;
+
+  // Frontend browser command intercept
+  const bcmd=detectBrowserCmd(text);
+  if(bcmd&&settings.autoOpen){
+    const id='msg_'+Date.now();
+    messages.push({role:'user',content:text,time:nowStr(),id});
+    inp.value=''; autosize();
+    welcome.style.display='none';
+    stream.appendChild(renderMsg(messages[messages.length-1]));
+    stream.scrollTop=stream.scrollHeight;
+    window.open(bcmd.url,'_blank','noopener,noreferrer');
+    addActivity('browser','Opened: '+bcmd.label);
+    const resp={role:'ai',content:`✓ Opened **${bcmd.label}** in your browser.`,time:nowStr(),id:'r_'+id,chips:[]};
+    messages.push(resp);
+    stream.appendChild(renderMsg(resp));
+    stream.scrollTop=stream.scrollHeight;
+    saveMessages();
+    toast('Opened',bcmd.label,'success');
+    return;
+  }
+
+  if(_pendingReq){ _pendingReq.abort(); messages=messages.filter(m=>!m._pending); _pendingReq=null; }
+
+  const uid='msg_'+Date.now();
+  messages.push({role:'user',content:text,time:nowStr(),id:uid});
+  inp.value=''; autosize();
+  welcome.style.display='none';
+  stream.appendChild(renderMsg(messages.find(m=>m.id===uid)));
+  stream.scrollTop=stream.scrollHeight;
+  saveMessages();
+
+  const pending={role:'ai',content:'',time:nowStr(),id:'r_'+uid,_pending:true,chips:[]};
+  messages.push(pending);
+  const pendingEl=renderMsg(pending);
+  stream.appendChild(pendingEl);
+  stream.scrollTop=stream.scrollHeight;
+
+  function updatePending(acc){
+    pending.content=acc;
+    const el=pendingEl.querySelector('.msg-content');
+    if(el) el.innerHTML=acc?md(acc):'<div class="typing"><span></span><span></span><span></span></div>';
+    stream.scrollTop=stream.scrollHeight;
+  }
+
+  const ctrl=new AbortController();
+  _pendingReq=ctrl;
+
+  // Parallel /chat for actions
+  const chatProm=fetch(`${API}/chat`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:text,session_id:SESSION_ID,context:ctx}),
+    cache:'no-store',signal:ctrl.signal,
+  }).then(r=>r.ok?r.json():r.status).catch(()=>null);
+
+  try{
+    if(settings.stream){
+      const ctxP=encodeURIComponent(JSON.stringify(ctx));
+      const resp=await fetch(`${API}/stream?message=${encodeURIComponent(text)}&session_id=${encodeURIComponent(SESSION_ID)}&context=${ctxP}`,{signal:ctrl.signal,cache:'no-store'});
+      if(!resp.ok){ pending.content=`⚠ Server error ${resp.status}`; pending._pending=false; renderAll(); return; }
+      const reader=resp.body.getReader();
+      const dec=new TextDecoder();
+      let acc='',buf='';
+      while(true){
+        const{done,value}=await reader.read();
+        if(done) break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n'); buf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data:')) continue;
+          const chunk=line.slice(line.startsWith('data: ')?6:5);
+          if(chunk==='[DONE]'){reader.cancel();break;}
+          // Handle OMEGA_ACTION embedded in stream
+          if(chunk.includes('\x00OMEGA_ACTION:')){
+            const [textPart,actionPart]=chunk.split('\x00OMEGA_ACTION:');
+            acc+=textPart.replace(/\\n/g,'\n');
+            try{ const act=JSON.parse(actionPart); handleAction(act); }catch{}
+          } else {
+            acc+=chunk.replace(/\\n/g,'\n');
+          }
+          updatePending(acc);
+        }
+      }
+      pending.content=acc||'(no response)';
+    } else {
+      const chatData=await chatProm;
+      if(chatData&&typeof chatData==='object') pending.content=chatData.response||'(no response)';
+      else pending.content='⚠ Connection error';
+    }
+
+    pending._pending=false;
+    updateCtx(pending.content,pending);
+
+    // Update DOM properly
+    const pc=pendingEl.querySelector('.msg-content');
+    if(pc) pc.innerHTML=md(pending.content);
+    const chipsArea=pendingEl.querySelector('.action-chips');
+    if(chipsArea) chipsArea.remove();
+    const chipsHTML=buildChipsHTML(pending.chips||[]);
+    if(chipsHTML) pendingEl.querySelector('.msg-body').insertAdjacentHTML('beforeend',chipsHTML);
+    const acts=pendingEl.querySelector('.msg-actions');
+    if(!acts&&pending.content){
+      pendingEl.querySelector('.msg-body').insertAdjacentHTML('beforeend',`<div class="msg-actions"><button class="msg-act" onclick="navigator.clipboard.writeText(this.closest('.msg').querySelector('.msg-content').innerText);toast('Copied','Copied','success')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button></div>`);
+    }
+
+    saveMessages();
+    stream.scrollTop=stream.scrollHeight;
+
+    // Handle action from /chat
+    const chatData=await chatProm;
+    if(chatData&&typeof chatData==='object'){
+      if(chatData.frontend_action?.type==='open_url') handleAction(chatData.frontend_action);
+      if(chatData.first_result_url&&!ctx.last_url){
+        ctx.last_url=chatData.first_result_url;
+        ctx.last_domain=extractDomain(chatData.first_result_url);
+      }
+      if(chatData.tool_calls?.length){
+        chatData.tool_calls.forEach(tc=>addActivity(tc.tool||'tool',tc.tool+(tc.args?': '+JSON.stringify(tc.args).slice(0,60):'')));
+      }
+    }
+
+    // Voice
+    if(settings.voice&&pending.content&&!pending.content.startsWith('⚠')){
+      speakText(pending.content);
+    }
+
+  }catch(err){
+    if(err.name==='AbortError') return;
+    try{
+      const cd=await chatProm;
+      if(cd&&typeof cd==='object'&&cd.response){ pending.content=cd.response; pending._pending=false; }
+      else { pending.content='⚠ Cannot connect to OMEGA backend. Start with: `python main.py`'; pending._pending=false; }
+    }catch{ pending.content='⚠ Cannot connect to OMEGA backend.'; pending._pending=false; }
+    const pc2=pendingEl.querySelector('.msg-content');
+    if(pc2) pc2.innerHTML=md(pending.content);
+    saveMessages();
+  }finally{
+    if(_pendingReq===ctrl) _pendingReq=null;
+  }
+}
+
+function handleAction(act){
+  if(!act) return;
+  if(act.type==='open_url'&&settings.autoOpen){
+    window.open(act.url,'_blank','noopener,noreferrer');
+    addActivity('browser','Opened: '+(act.label||act.url));
+    toast('Opened',act.label||act.url,'success');
+  }
+}
+
+/* ── INPUT ──────────────────────────────────────────────────── */
+const inp=document.getElementById('input');
+function handleKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }
+}
+function autosize(){
+  inp.style.height='auto';
+  inp.style.height=Math.min(inp.scrollHeight,140)+'px';
+}
+inp.addEventListener('input',autosize);
+function usePrompt(p){ inp.value=p; autosize(); inp.focus(); }
+function quickAction(p){ inp.value=p; send(); }
+
+/* ── VOICE INPUT ─────────────────────────────────────────────── */
+let recognition=null;
+let voiceActive=false;
+function toggleVoice(){
+  if(voiceActive){ stopVoice(); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast('Voice','Speech recognition not supported in this browser','error'); return; }
+  recognition=new SR();
+  recognition.continuous=false; recognition.interimResults=true; recognition.lang='en-US';
+  recognition.onresult=e=>{
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    inp.value=t; autosize();
+  };
+  recognition.onend=()=>{ voiceActive=false; document.getElementById('voiceBtn').classList.remove('active'); document.getElementById('voiceIndicator').classList.remove('active'); if(inp.value.trim()) send(); };
+  recognition.onerror=()=>{ voiceActive=false; document.getElementById('voiceBtn').classList.remove('active'); document.getElementById('voiceIndicator').classList.remove('active'); };
+  recognition.start();
+  voiceActive=true;
+  document.getElementById('voiceBtn').classList.add('active');
+  document.getElementById('voiceIndicator').classList.add('active');
+}
+function stopVoice(){
+  if(recognition) recognition.stop();
+  voiceActive=false;
+  document.getElementById('voiceBtn').classList.remove('active');
+  document.getElementById('voiceIndicator').classList.remove('active');
+}
+
+/* ── VOICE OUTPUT ────────────────────────────────────────────── */
+let _audioEl=null;
+function speakText(text){
+  const clean=text.replace(/```[\s\S]*?```/g,'').replace(/`[^`]+`/g,'').replace(/https?:\/\/\S+/g,'').replace(/\*\*/g,'').replace(/#{1,6}\s/g,'').trim().slice(0,800);
+  if(!clean) return;
+  fetch(`${API}/voice/speak`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:clean})}).then(r=>{
+    if(!r.ok) return;
+    return r.blob();
+  }).then(blob=>{
+    if(!blob) return;
+    if(_audioEl){ _audioEl.pause(); _audioEl=null; }
+    _audioEl=new Audio(URL.createObjectURL(blob));
+    _audioEl.play().catch(()=>{});
+  }).catch(()=>{});
+}
+
+/* ── RESEARCH ─────────────────────────────────────────────────── */
+async function doResearch(){
+  const q=document.getElementById('researchInput').value.trim();
+  if(!q) return;
+  addActivity('research','Searching: '+q);
+  document.getElementById('researchLoading').style.display='block';
+  document.getElementById('researchContent').innerHTML='';
+  document.getElementById('researchContent').classList.remove('visible');
+  try{
+    const r=await fetch(`${API}/research/deep`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,depth:'standard'})});
+    const data=await r.json();
+    document.getElementById('researchLoading').style.display='none';
+    let html=`<h3>Results: ${escHtml(q)}</h3>`;
+    if(data.summary) html+=`<div class="research-summary">${md(data.summary)}</div>`;
+    if(data.raw?.results?.length){
+      html+='<div class="research-sources">';
+      data.raw.results.slice(0,5).forEach(rs=>{
+        html+=`<div class="research-source"><a href="${escHtml(rs.url||'')}" target="_blank" rel="noopener">${escHtml(rs.title||rs.url||'Source')}</a><div class="rs-snippet">${escHtml((rs.snippet||'').slice(0,180))}</div></div>`;
+      });
+      html+='</div>';
+    }
+    document.getElementById('researchContent').innerHTML=html;
+    document.getElementById('researchContent').classList.add('visible');
+    addActivity('research','Done: '+q);
+  }catch(e){
+    document.getElementById('researchLoading').style.display='none';
+    document.getElementById('researchContent').innerHTML='<div class="empty-state"><p>Research failed. Check your connection.</p></div>';
+    document.getElementById('researchContent').classList.add('visible');
+  }
+}
+
+/* ── TASKS ───────────────────────────────────────────────────── */
+async function refreshTasks(){
+  try{
+    const r=await fetch(`${API}/tasks`);
+    const data=await r.json();
+    const tasks=data.tasks||[];
+    const pending=tasks.filter(t=>t.status==='pending');
+    document.getElementById('taskBadge').textContent=pending.length;
+    document.getElementById('taskCount').textContent=pending.length+' pending';
+    const list=document.getElementById('tasksList');
+    if(!tasks.length){
+      list.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><p>No tasks yet. Ask OMEGA to add one.</p></div>';
+      return;
+    }
+    list.innerHTML=tasks.map(t=>`
+      <div class="task-item">
+        <div class="task-cb ${t.status==='done'?'done':''}" onclick="completeTask(${t.id},this)"></div>
+        <div class="task-info">
+          <div class="task-title ${t.status==='done'?'done-text':''}">${escHtml(t.title)}</div>
+          <div class="task-meta">
+            <span class="task-pri ${t.priority||'normal'}">${t.priority||'normal'}</span>
+            <span class="task-proj">#${escHtml(t.project||'inbox')}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('tasksList').innerHTML='<div class="empty-state"><p>Could not load tasks.</p></div>';
+  }
+}
+async function completeTask(id,el){
+  el.classList.toggle('done');
+  const isDone=el.classList.contains('done');
+  await fetch(`${API}/tasks/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:isDone?'done':'pending'})}).catch(()=>{});
+  setTimeout(refreshTasks,400);
+}
+
+/* ── MEMORIES ────────────────────────────────────────────────── */
+async function loadMemories(){
+  try{
+    const r=await fetch(`${API}/memories`);
+    const data=await r.json();
+    const mems=data.memories||[];
+    const list=document.getElementById('memoriesList');
+    if(!mems.length){
+      list.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg><p>No memories stored yet</p></div>';
+      return;
+    }
+    list.innerHTML=mems.slice(0,30).map(m=>`
+      <div class="mem-item">
+        <div class="mem-cat">${escHtml(m.category||'general')}</div>
+        <div class="mem-text">${escHtml(m.content||'')}</div>
+        <div class="mem-time">${m.created_at||''}</div>
+      </div>`).join('');
+    document.getElementById('siMems').textContent=mems.length;
+  }catch(e){
+    document.getElementById('memoriesList').innerHTML='<div class="empty-state"><p>Could not load memories.</p></div>';
+  }
+}
+
+/* ── SYSTEM ──────────────────────────────────────────────────── */
+async function loadSystem(){
+  try{
+    const r=await fetch(`${API}/system`);
+    const data=await r.json();
+    const rpt=data.report||{};
+    const cpu=rpt.cpu_percent??0;
+    const ram=rpt.ram?.percent??0;
+    const disk=rpt.disk?.percent??0;
+    document.getElementById('cpuVal').textContent=cpu.toFixed(1)+'%';
+    document.getElementById('cpuBar').style.width=cpu+'%';
+    document.getElementById('ramVal').textContent=ram.toFixed(1)+'%';
+    document.getElementById('ramBar').style.width=ram+'%';
+    document.getElementById('diskVal').textContent=disk.toFixed(1)+'%';
+    document.getElementById('diskBar').style.width=disk+'%';
+    document.getElementById('siPlatform').textContent=rpt.platform||'--';
+    const uptime=rpt.uptime_hours!=null?rpt.uptime_hours.toFixed(1)+'h':'--';
+    document.getElementById('siUptime').textContent=uptime;
+  }catch(e){}
+  try{
+    const r2=await fetch(`${API}/status`);
+    const s=await r2.json();
+    document.getElementById('modelPill').textContent=(s.model||'').split('/').pop()||'unknown';
+    document.getElementById('siTasks').textContent=s.tasks??'--';
+    const isLive=s.ai_ready!==false;
+    document.getElementById('topStatus').textContent=isLive?'CONNECTED':'OFFLINE';
+  }catch(e){}
+}
+
+/* ── STATUS POLLING ──────────────────────────────────────────── */
+async function pollStatus(){
+  try{
+    const r=await fetch(`${API}/status`);
+    const s=await r.json();
+    document.getElementById('modelPill').textContent=(s.model||'').split('/').pop()||'llm';
+    document.getElementById('topStatus').textContent='CONNECTED';
+    document.getElementById('siTasks').textContent=s.tasks??'--';
+  }catch(e){
+    document.getElementById('topStatus').textContent='OFFLINE';
+  }
+}
+setInterval(pollStatus,30000);
+pollStatus();
+loadSystem();
+
+/* ── RESEARCH INPUT ENTER ────────────────────────────────────── */
+document.getElementById('researchInput').addEventListener('keydown',e=>{ if(e.key==='Enter') doResearch(); });
+</script>
+</body>
+</html>
